@@ -22,7 +22,38 @@ const config = {
     }
 };
 
-// Ruta de areas
+//Consulta areas de captura
+
+app.get('/api/area',async(req,res)=>{
+  try {
+    await sql.connect(config);
+    const result=await sql.query`SELECT id_area,area FROM areas_lecturas_qr`;
+    res.json(result.recordset);
+  }catch(err){
+    console.log(err);
+    res.status(500).send('Error en el sevidor');
+
+  }finally{
+    await sql.close();
+  }
+})
+
+//Consulta areas de VihiculosQr
+app.get('/api/vehiculos',async(req,res)=>{
+try{
+  await sql.connect(config);
+  const result=await sql.query`SELECT id, placa FROM vehiculos_qr`
+  res.json(result.recordset);
+}catch(err){
+  console.log(err);
+  res.status(500).send('Error en el sevidor');
+}
+finally{
+  await sql.close();
+}
+})
+
+// Ruta de consulta lecturas
 app.get('/api/reporte', async (req, res) => {
   try {
     await sql.connect(config);
@@ -36,8 +67,6 @@ app.get('/api/reporte', async (req, res) => {
   }
 });
 
-
-
 //Login usuarios
 app.post('/api/login', async (req, res) => {
   const { user, password } = req.body;
@@ -47,7 +76,7 @@ app.post('/api/login', async (req, res) => {
 
     if (result.recordset.length > 0) {
       const user = result.recordset[0];
-      if (user.contrasena === password) { // Nota: Esto no es seguro para producción
+      if (user.contrasena === password) { 
         res.json({ success: true, message: 'Login exitoso' });
       } else {
         res.json({ success: false, message: 'Contraseña incorrecta' });
