@@ -7,7 +7,9 @@ const app = express();
 const port = 4001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:4200' 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -24,19 +26,18 @@ const config = {
 
 //Consulta areas de captura
 
-app.get('/api/area',async(req,res)=>{
+app.get('/api/area', async (req, res) => {
   try {
     await sql.connect(config);
-    const result=await sql.query`SELECT id_area,area FROM areas_lecturas_qr`;
+    const result = await sql.query`SELECT id_area, area FROM areas_lecturas_qr`;
     res.json(result.recordset);
-  }catch(err){
-    console.log(err);
-    res.status(500).send('Error en el sevidor');
-
-  }finally{
+  } catch (err) {
+    console.error('Error en /api/area:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
     await sql.close();
   }
-})
+});
 
 //Consulta areas de VihiculosQr
 app.get('/api/vehiculos',async(req,res)=>{
@@ -75,9 +76,11 @@ app.post('/api/login', async (req, res) => {
     const result = await sql.query`SELECT * FROM usuarios_qr WHERE usuario = ${user}`;
 
     if (result.recordset.length > 0) {
-      const user = result.recordset[0];
-      if (user.contrasena === password) { 
-        res.json({ success: true, message: 'Login exitoso' });
+      const userData = result.recordset[0];
+      if (userData.contrasena === password) { 
+
+        const { contrasena, ...userInfo } = userData;
+        res.json({ success: true, message: 'Login exitoso', user: userInfo });
       } else {
         res.json({ success: false, message: 'Contraseña incorrecta' });
       }
@@ -94,7 +97,6 @@ app.post('/api/login', async (req, res) => {
 
 // Ruta para insertar datos
 app.post('/api/insertar', async (req, res) => {
-  console.log('Datos recibidos:', req.body);  // Log de los datos recibidos
 
   // Verificar si req.body es un array
   const datos = Array.isArray(req.body) ? req.body : [req.body];
