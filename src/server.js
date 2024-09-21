@@ -25,7 +25,6 @@ const config = {
 };
 
 //Consulta areas de captura
-
 app.get('/api/area', async (req, res) => {
   try {
     await sql.connect(config);
@@ -40,25 +39,24 @@ app.get('/api/area', async (req, res) => {
 });
 
 //Consulta areas de VihiculosQr
-app.get('/api/vehiculos',async(req,res)=>{
-try{
-  await sql.connect(config);
-  const result=await sql.query`SELECT id, placa FROM vehiculos_qr`
-  res.json(result.recordset);
-}catch(err){
-  console.log(err);
-  res.status(500).send('Error en el sevidor');
-}
-finally{
-  await sql.close();
-}
-})
+app.get('/api/vehiculos', async (req, res) => {
+  try {
+    await sql.connect(config);
+    const result = await sql.query`SELECT id, placa FROM vehiculos_qr`
+    res.json(result.recordset);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Error en el servidor');
+  } finally {
+    await sql.close();
+  }
+});
 
 // Ruta de consulta lecturas
 app.get('/api/reporte', async (req, res) => {
   try {
     await sql.connect(config);
-    const result = await sql.query`SELECT * FROM qr_registro`;
+    const result = await sql.query`SELECT * FROM vw_ReporteQR`;
     res.json(result.recordset);
   } catch (err) {
     console.error(err);
@@ -78,7 +76,6 @@ app.post('/api/login', async (req, res) => {
     if (result.recordset.length > 0) {
       const userData = result.recordset[0];
       if (userData.contrasena === password) { 
-
         const { contrasena, ...userInfo } = userData;
         res.json({ success: true, message: 'Login exitoso', user: userInfo });
       } else {
@@ -97,36 +94,44 @@ app.post('/api/login', async (req, res) => {
 
 // Ruta para insertar datos
 app.post('/api/insertar', async (req, res) => {
-
   // Verificar si req.body es un array
   const datos = Array.isArray(req.body) ? req.body : [req.body];
 
+  let connection;
   try {
-    await sql.connect(config);
+    connection = await sql.connect(config);
     
+    const resultados = [];
     for (const item of datos) {
-      if (!item.area_captura) {
-        throw new Error('area_captura es requerido');
+      if (!item.area_captura || !item.id_usuario) {
+        throw new Error('area_captura e id_usuario son requeridos');
       }
 
       const result = await sql.query`
-        INSERT INTO qr_registro (area_captura, vehiculo, lectura) 
-        VALUES (${item.area_captura}, ${item.vehiculo || ''}, ${item.lectura})
+        INSERT INTO qr_registro (area_captura, vehiculo, lectura, id_usuario) 
+        VALUES (${item.area_captura}, ${item.vehiculo || ''}, ${item.lectura}, ${item.id_usuario})
       `;
       console.log('Inserción exitosa:', result);
+      resultados.push(result);
     }
 
-    res.status(200).json({ message: 'Datos insertados correctamente' });
+    res.status(200).json({ 
+      message: 'Datos insertados correctamente',
+      count: resultados.length,
+      results: resultados
+    });
   } catch (err) {
     console.error('Error en la inserción:', err);
-    res.status(500).json({ error: err.message || 'Error del servidor' });
+    res.status(500).json({ 
+      error: err.message || 'Error del servidor',
+      details: err
+    });
   } finally {
-    if (sql.connected) {
-      await sql.close();
+    if (connection) {
+      await connection.close();
     }
   }
 });
-
 
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
