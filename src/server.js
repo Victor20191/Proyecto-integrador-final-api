@@ -71,7 +71,10 @@ app.post('/api/login', async (req, res) => {
   const { user, password } = req.body;
   try {
     await sql.connect(config);
-    const result = await sql.query`SELECT * FROM usuarios_qr WHERE usuario = ${user}`;
+    const result = await sql.query` SELECT u.*, r.nombre_rol 
+      FROM usuarios_qr u
+      LEFT JOIN roles r ON u.rol_id = r.id
+      WHERE u.usuario = ${user}`;
 
     if (result.recordset.length > 0) {
       const userData = result.recordset[0];
@@ -94,37 +97,39 @@ app.post('/api/login', async (req, res) => {
 
 // Ruta para insertar datos
 app.post('/api/insertar', async (req, res) => {
-  // Verificar si req.body es un array
   const datos = Array.isArray(req.body) ? req.body : [req.body];
-
   let connection;
   try {
     connection = await sql.connect(config);
     
+    console.log('Datos recibidos:', datos);  // Registrar datos recibidos
+    
     const resultados = [];
     for (const item of datos) {
+      console.log('Procesando elemento:', item);  // Registrar cada elemento procesado
+      
       if (!item.area_captura || !item.id_usuario) {
         throw new Error('area_captura e id_usuario son requeridos');
       }
-
+      
       const result = await sql.query`
         INSERT INTO qr_registro (area_captura, vehiculo, lectura, id_usuario) 
         VALUES (${item.area_captura}, ${item.vehiculo || ''}, ${item.lectura}, ${item.id_usuario})
       `;
-      console.log('Inserción exitosa:', result);
+      console.log('Resultado de la inserción:', result);
       resultados.push(result);
     }
-
-    res.status(200).json({ 
+    
+    res.status(200).json({
       message: 'Datos insertados correctamente',
       count: resultados.length,
       results: resultados
     });
   } catch (err) {
-    console.error('Error en la inserción:', err);
-    res.status(500).json({ 
+    console.error('Error detallado:', err);  // Registrar el objeto de error completo
+    res.status(500).json({
       error: err.message || 'Error del servidor',
-      details: err
+      details: err.toString()  // Convertir error a string para más detalles
     });
   } finally {
     if (connection) {
@@ -132,7 +137,6 @@ app.post('/api/insertar', async (req, res) => {
     }
   }
 });
-
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
