@@ -54,9 +54,20 @@ app.get('/api/vehiculos', async (req, res) => {
 
 // Ruta de consulta lecturas
 app.get('/api/reporte', async (req, res) => {
+  const userId = req.query.userId;
+  const userRole = req.query.userRole;
+
   try {
     await sql.connect(config);
-    const result = await sql.query`SELECT * FROM vw_ReporteQR`;
+    let query = 'SELECT * FROM vw_ReporteQR';
+    let request = new sql.Request();
+
+    if (userRole !== 'Administrador') {
+      query += ' WHERE id_usuario = @userId';
+      request.input('userId', sql.Int, parseInt(userId));
+    }
+
+    const result = await request.query(query);
     res.json(result.recordset);
   } catch (err) {
     console.error(err);
