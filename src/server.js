@@ -14,10 +14,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const config = {
-    user: process.env.DB_USER || 'tu_usuario',
-    password: process.env.DB_PASSWORD || 'tu_contraseña',
-    server: process.env.DB_SERVER || 'tu_servidor', 
-    database: process.env.DB_DATABASE || 'tu_base_de_datos',
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_SERVER, 
+    database: process.env.DB_DATABASE,
     options: {
       encrypt: true, 
       trustServerCertificate: true 
@@ -113,11 +113,8 @@ app.post('/api/insertar', async (req, res) => {
   try {
     connection = await sql.connect(config);
     
-    console.log('Datos recibidos:', datos);  // Registrar datos recibidos
-    
     const resultados = [];
     for (const item of datos) {
-      console.log('Procesando elemento:', item);  // Registrar cada elemento procesado
       
       if (!item.area_captura || !item.id_usuario) {
         throw new Error('area_captura e id_usuario son requeridos');
@@ -127,7 +124,6 @@ app.post('/api/insertar', async (req, res) => {
         INSERT INTO qr_registro (area_captura, vehiculo, lectura, id_usuario) 
         VALUES (${item.area_captura}, ${item.vehiculo || ''}, ${item.lectura}, ${item.id_usuario})
       `;
-      console.log('Resultado de la inserción:', result);
       resultados.push(result);
     }
     
@@ -137,10 +133,10 @@ app.post('/api/insertar', async (req, res) => {
       results: resultados
     });
   } catch (err) {
-    console.error('Error detallado:', err);  // Registrar el objeto de error completo
+    console.error('Error detallado:', err); 
     res.status(500).json({
       error: err.message || 'Error del servidor',
-      details: err.toString()  // Convertir error a string para más detalles
+      details: err.toString()
     });
   } finally {
     if (connection) {
